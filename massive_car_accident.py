@@ -1,36 +1,17 @@
 import py_trees
 import carla
-import math
-import time
-import os
-import datetime
 
 from agents.navigation.local_planner import RoadOption
 from srunner.scenarios.basic_scenario import BasicScenario
 from srunner.tools.scenario_helper import (generate_target_waypoint,
-                                           get_location_in_distance_from_wp,
-                                           get_waypoint_in_distance,
-                                           generate_target_waypoint_list,
-                                           choose_at_junction)
+                                           generate_target_waypoint_list)
 from srunner.scenariomanager.timer import TimeOut
-from srunner.scenariomanager.timer import GameTime
 from srunner.scenariomanager.carla_data_provider import CarlaDataProvider
-from srunner.scenariomanager.scenarioatomics.atomic_behaviors import (AtomicBehavior,
-                                                                      StopVehicle,
-                                                                      AccelerateToVelocity,
+from srunner.scenariomanager.scenarioatomics.atomic_behaviors import (StopVehicle,
                                                                       ActorTransformSetter,
-                                                                      ActorDestroy,
                                                                       WaypointFollower,
-                                                                      KeepVelocity,
-                                                                      ChangeAutoPilot,
-                                                                      SetInitSpeed,
-                                                                      HandBrakeVehicle,
-                                                                      KeepVelocity,
-                                                                      get_actor_control,
-                                                                      calculate_distance)
-from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import (InTriggerDistanceToLocation,
-                                                                               TriggerVelocity,
-                                                                               StandStill)
+                                                                      SetInitSpeed)
+from srunner.scenariomanager.scenarioatomics.atomic_trigger_conditions import (InTriggerDistanceToLocation)
 
 
 class MassiveCarAccident(BasicScenario):
@@ -284,12 +265,9 @@ class MassiveCarAccident(BasicScenario):
         # self.debug.draw_point(self._actor_police_8_transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
         # self.debug.draw_point(self._actor_police_9_transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
         # self.debug.draw_point(self._actor_police_10_transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
-        # self.debug.draw_point(self._actor_ambulance_11_transform.location + carla.Location(z=0.5), size=0.5,
-        #                       life_time=0)
-        # self.debug.draw_point(self._actor_ambulance_12_transform.location + carla.Location(z=0.5), size=0.5,
-        #                       life_time=0)
-        # self.debug.draw_point(self._actor_firetruck_13_transform.location + carla.Location(z=0.5), size=0.5,
-        #                       life_time=0)
+        # self.debug.draw_point(self._actor_ambulance_11_transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
+        # self.debug.draw_point(self._actor_ambulance_12_transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
+        # self.debug.draw_point(self._actor_firetruck_13_transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
 
     def _create_behavior(self):
         # Sequence 1
@@ -375,15 +353,13 @@ class MassiveCarAccident(BasicScenario):
         actors_emergency_route_wp_1_2 = actors_emergency_route_wp_1.get_left_lane()
         actors_emergency_route_wp_2 = generate_target_waypoint(actors_emergency_route_wp_1_2, -1)
         actors_emergency_route_wp_3 = generate_target_waypoint(actors_emergency_route_wp_2, -1)
-        actors_emergency_route_wp_4_v1 = actors_emergency_route_wp_3.next(50)[0]
-        actors_emergency_route_wp_4_v3 = actors_emergency_route_wp_3.next(70)[0]
-        actors_emergency_route_wp_4_v2 = actors_emergency_route_wp_3.next(60)[0]
+        actors_emergency_route_wp_4_1 = actors_emergency_route_wp_3.next(50)[0]
+        actors_emergency_route_wp_4_2 = actors_emergency_route_wp_3.next(50)[0] # Waypoint in the opposite direction
 
-        flag = actors_emergency_route_wp_4_v2.lane_id
-        # move to the right lane of the right intersection
+        flag = actors_emergency_route_wp_4_2.lane_id
         while True:
-            if flag * actors_emergency_route_wp_4_v2.lane_id > 0:
-                wp_next = actors_emergency_route_wp_4_v2.get_left_lane()
+            if flag * actors_emergency_route_wp_4_2.lane_id > 0:
+                wp_next = actors_emergency_route_wp_4_2.get_left_lane()
             else:
                 break
 
@@ -392,19 +368,14 @@ class MassiveCarAccident(BasicScenario):
             elif wp_next.lane_type == carla.LaneType.Shoulder or wp_next.lane_type == carla.LaneType.Parking:
                 break
             else:
-                actors_emergency_route_wp_4_v2 = wp_next
-        actors_emergency_route_wp_4_v2_f = actors_emergency_route_wp_4_v2.get_right_lane()
+                actors_emergency_route_wp_4_2 = wp_next
+        actors_emergency_route_wp_4_2 = actors_emergency_route_wp_4_2.get_right_lane()
 
         self.debug.draw_point(actors_emergency_route_wp_1.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
         self.debug.draw_point(actors_emergency_route_wp_2.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
         self.debug.draw_point(actors_emergency_route_wp_3.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
-        # self.debug.draw_point(actors_emergency_route_wp_4_v1.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
-        self.debug.draw_point(actors_emergency_route_wp_4_v2_f.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
-        # self.debug.draw_point(actors_emergency_route_wp_4_v3.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
-
-        sequence_2_actor_police_8 = py_trees.composites.Sequence("Sequence 1 – other_actors[8]")
-        sequence_2_actor_police_8.add_child(
-            ActorTransformSetter(self.other_actors[8], self._actor_police_8_transform))
+        self.debug.draw_point(actors_emergency_route_wp_4_1.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
+        self.debug.draw_point(actors_emergency_route_wp_4_2.transform.location + carla.Location(z=0.5), size=0.5, life_time=0)
 
         actor_police_9_plan_1 = []
         for wp in generate_target_waypoint_list(actors_emergency_route_wp_1_2, turn=1)[0]:
@@ -413,36 +384,36 @@ class MassiveCarAccident(BasicScenario):
             actor_police_9_plan_1.append(wp)
         for wp in generate_target_waypoint_list(actors_emergency_route_wp_3, turn=1)[0]:
             actor_police_9_plan_1.append(wp)
-        actor_police_9_plan_2 = []
-        for wp in generate_target_waypoint_list(actors_emergency_route_wp_4_v2_f, turn=-1)[0]:
-            actor_police_9_plan_2.append(wp)
+        for wp in generate_target_waypoint_list(actors_emergency_route_wp_4_1)[0]:
+            actor_police_9_plan_1.append(wp)
+        for wp in turn_left(actors_emergency_route_wp_4_1):
+            actor_police_9_plan_1.append(wp)
 
-        sequence_2_actor_police_9 = py_trees.composites.Sequence("Sequence 1 – other_actors[9]")
+        sequence_2_actor_police_9 = py_trees.composites.Sequence("Sequence 2 – other_actors[9]")
         sequence_2_actor_police_9.add_child(
             ActorTransformSetter(self.other_actors[9], self._actor_police_9_transform))
         sequence_2_actor_police_9.add_child(TimeOut(4))
         sequence_2_actor_police_9.add_child(
             WaypointFollower(self.other_actors[9], target_speed=10.0, plan=actor_police_9_plan_1))
-        sequence_2_actor_police_9.add_child(
-            WaypointFollower(self.other_actors[9], target_speed=0.0, plan=actor_police_9_plan_2))
-        # sequence_2_actor_police_9.add_child(
-        #     InTriggerDistanceToLocation(self.other_actors[9], self._accident_waypoint.transform.location, 15.0))
-        # sequence_2_actor_police_9.add_child(StopVehicle(self.other_actors[9], 1.0))
         sequence_2_actor_police_9.add_child(TimeOut(20))  # For observing
 
-        sequence_2_actor_police_10 = py_trees.composites.Sequence("Sequence 1 – other_actors[10]")
+        sequence_2_actor_police_8 = py_trees.composites.Sequence("Sequence 2 – other_actors[8]")
+        sequence_2_actor_police_8.add_child(
+            ActorTransformSetter(self.other_actors[8], self._actor_police_8_transform))
+
+        sequence_2_actor_police_10 = py_trees.composites.Sequence("Sequence 2 – other_actors[10]")
         sequence_2_actor_police_10.add_child(
             ActorTransformSetter(self.other_actors[10], self._actor_police_10_transform))
 
-        sequence_2_actor_ambulance_11 = py_trees.composites.Sequence("Sequence 1 – other_actors[11]")
+        sequence_2_actor_ambulance_11 = py_trees.composites.Sequence("Sequence 2 – other_actors[11]")
         sequence_2_actor_ambulance_11.add_child(
             ActorTransformSetter(self.other_actors[11], self._actor_ambulance_11_transform))
 
-        sequence_2_actor_ambulance_12 = py_trees.composites.Sequence("Sequence 1 – other_actors[12]")
+        sequence_2_actor_ambulance_12 = py_trees.composites.Sequence("Sequence 2 – other_actors[12]")
         sequence_2_actor_ambulance_12.add_child(
             ActorTransformSetter(self.other_actors[12], self._actor_ambulance_12_transform))
 
-        sequence_2_actor_firetruck_13 = py_trees.composites.Sequence("Sequence 1 – other_actors[13]")
+        sequence_2_actor_firetruck_13 = py_trees.composites.Sequence("Sequence 2 – other_actors[13]")
         sequence_2_actor_firetruck_13.add_child(
             ActorTransformSetter(self.other_actors[13], self._actor_firetruck_13_transform))
 
@@ -466,7 +437,6 @@ class MassiveCarAccident(BasicScenario):
 
         main_sequence = py_trees.composites.Sequence("Main Sequence")
         main_sequence.add_child(sequence_1)
-        # main_sequence.add_child(StandStill(self.other_actors[7], name="Vehicle_7_StandStill", duration=3.0))
         main_sequence.add_child(sequence_2)
 
         return main_sequence
@@ -476,3 +446,18 @@ class MassiveCarAccident(BasicScenario):
 
     def __del__(self):
         pass
+
+
+def turn_left(waypoint):
+    target_waypoint = waypoint
+
+    current_transform = target_waypoint.transform
+    current_transform.location.x -= 5.0
+    current_transform.location.y -= 5.0
+    current_transform.rotation.yaw -= 90.0
+
+    target_waypoint = current_transform
+
+    plan = [(target_waypoint, RoadOption.LANEFOLLOW)]
+
+    return plan
